@@ -6,6 +6,10 @@ const UserSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     isAdmin: { type: Boolean, default: false },
+    avatar: {type: String, default: ""},
+    name: { type: String, default: "", max: 13 },
+    about: { type: String, default: "Hey! I am using ichat", max: 30 },
+    contacts: { type: Array, default: [] },
   },
   { timestamps: true }
 );

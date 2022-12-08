@@ -20,10 +20,10 @@ router.post("/", async (req, res) => {
   if (error) return res.status(400).send(error.details[0].message);
 
   let user = await User.findOne({username: req.body.username});
-  if (user) return res.status(400).send("Username already taken...");
+  if (user) return res.status(400).send("Username already taken");
 
   let isValid = await User.findOne({email: req.body.email});
-  if(isValid) return res.status(400).send("Email already taken...")
+  if(isValid) return res.status(400).send("Email already taken")
   
   // DOC the userData
   const { username, email, password } = req.body;
