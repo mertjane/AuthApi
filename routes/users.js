@@ -3,6 +3,22 @@ const router = require("express").Router();
 // const genAuthToken = require("../utils/genAuthToken");
 // const bcrypt = require("bcrypt");
 
+// get friend 
+router.get("/", async (req, res) => {
+  const userId = req.query.userId;
+  const name = req.query.name;
+  try{
+    const user = userId
+    ? await User.findById(userId)
+    : await User.findOne({name: name});
+    const {password, updatedAt, createdAt, isAdmin,username, email, contacts, __v, ...other} = user._doc;
+    res.status(200).json(other)
+  } catch(err){
+    res.status(500).json(err)
+  }
+})
+
+
 // GET A USER
 router.get("/:id", async (req, res) => {
   try {
