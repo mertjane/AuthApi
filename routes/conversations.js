@@ -17,10 +17,11 @@ router.post("/", async (req, res) => {
 // get conversation of user
 router.get("/:userId", async (req, res) => {
   try {
-      await Conversation.find({
+     /* const conversation = await Conversation.find({
       members: { $in: [req.params.userId] },
-    });
+    }); */
     const conversation = await Conversation.aggregate([
+      { "$match": { members: { $in: [req.params.userId]}}},
       { "$lookup": {
         "from": "messages",
         "let": { "conversationId": "$_id" },
@@ -32,9 +33,11 @@ router.get("/:userId", async (req, res) => {
       {"$limit": 1}
       ],"as": "lastMessages"}}
     ])
-    res.status(200).json(conversation);
+    res.status(200).json(conversation?.sort((c1, c2) => {
+      return new Date(c2.lastMessages[0]?.createdAt) - new Date(c1?.lastMessages[0]?.createdAt)
+    }));
   } catch (err) {
-    res.status(500).json(err);
+    res.status(500).json(err.message);
   }
 });
 

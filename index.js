@@ -79,7 +79,7 @@ let users = [];
 
 const addUser = (userId, socketId, roomId) => {
   !users.some((user) => user.userId === userId) &&
-    users.push({ userId, socketId, roomId});
+    users.push({ userId, socketId, roomId });
 };
 
 const removeUser = (socketId) => {
@@ -92,17 +92,17 @@ const getUser = (userId) => {
 
 io.on("connection", (socket) => {
   //connection
-  console.log("a user connected to socket")
+  console.log("a user connected to socket");
 
   socket.on("join-chat", (roomId) => {
     socket.join(roomId);
-    console.log("User joined room " + roomId)
-  })
+    console.log("User joined room " + roomId);
+  });
 
   // user online status
   socket.on("user-online", () => {
-    socket.broadcast.emit("user-online-from-server")
-  })
+    socket.broadcast.emit("user-online-from-server");
+  });
 
   //take userId and socketId from user
   socket.on("addUser", (userId) => {
@@ -111,15 +111,15 @@ io.on("connection", (socket) => {
   });
 
   //typing
-  socket.on("start-typing", ({roomId}) => {
+  socket.on("start-typing", ({ roomId }) => {
     let skt = socket.broadcast;
     skt = roomId ? skt.to(roomId) : skt;
-    skt.emit("start-typing-from-server")
-  })
+    skt.emit("start-typing-from-server");
+  });
   socket.on("stop-typing", () => {
-    socket.broadcast.emit("stop-typing-from-server")
-  })
-  
+    socket.broadcast.emit("stop-typing-from-server");
+  });
+
   //send and get message
   socket.on("sendMessage", ({ senderId, receiverId, text }) => {
     const user = getUser(receiverId);
@@ -132,7 +132,7 @@ io.on("connection", (socket) => {
   //disconnection
   socket.on("disconnect", () => {
     console.log("user disconnected");
-    socket.broadcast.emit("user-disconnect-from-server")
+    socket.broadcast.emit("user-disconnect-from-server");
     removeUser(socket.id);
     io.emit("getUsers", users);
   });
