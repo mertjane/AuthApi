@@ -121,13 +121,31 @@ io.on("connection", (socket) => {
   });
 
   //send and get message
-  socket.on("sendMessage", ({ senderId, receiverId, text }) => {
+  socket.on("sendMessage", ({ conversationId, senderId, receiverId, text }) => {
     const user = getUser(receiverId);
     io.to(user?.socketId).emit("getMessage", {
+      conversationId,
+      senderId,
+      text,
+    });
+    io.to(user?.socketId).emit("newNotification", {
+      conversationId,
       senderId,
       text,
     });
   });
+
+  /* socket.on(
+    "send-notification",
+    ({ conversationId, senderId, receiverId, text }) => {
+      const user = getUser(receiverId);
+        io.to(user?.socketId).emit("get-notification", {
+          conversationId,
+          senderId,
+          text,
+        });
+      }
+  ); */
 
   //disconnection
   socket.on("disconnect", () => {

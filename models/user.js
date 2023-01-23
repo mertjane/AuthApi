@@ -10,6 +10,10 @@ const UserSchema = new mongoose.Schema(
     name: { type: String, default: "", max: 13 },
     about: { type: String, default: "Hey! I am using ichat", max: 30 },
     contacts: { type: Array, default: [] },
+    blockedContacts: { type: Array, default: [] },
+    theme: { type: String, default: "default", enum:["default", "dark", "open"]},
+    chatWallpaper: { type: String, default: "#ede8e0" },
+    drawings: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

@@ -3,21 +3,30 @@ const router = require("express").Router();
 // const genAuthToken = require("../utils/genAuthToken");
 // const bcrypt = require("bcrypt");
 
-// get friend 
+// get friend
 router.get("/", async (req, res) => {
   const userId = req.query.userId;
   const name = req.query.name;
-  try{
+  try {
     const user = userId
-    ? await User.findById(userId)
-    : await User.findOne({name: name});
-    const {password, updatedAt, createdAt, isAdmin,username, email, contacts, __v, ...other} = user._doc;
-    res.status(200).json(other)
-  } catch(err){
-    res.status(500).json(err)
+      ? await User.findById(userId)
+      : await User.findOne({ name: name });
+    const {
+      password,
+      updatedAt,
+      createdAt,
+      isAdmin,
+      username,
+      email,
+      contacts,
+      __v,
+      ...other
+    } = user._doc;
+    res.status(200).json(other);
+  } catch (err) {
+    res.status(500).json(err);
   }
-})
-
+});
 
 // GET A USER
 router.get("/:id", async (req, res) => {
@@ -32,6 +41,7 @@ router.get("/:id", async (req, res) => {
       email,
       contacts,
       isAdmin,
+      blockedContacts,
       __v,
       ...other
     } = user._doc;
@@ -61,19 +71,68 @@ router.get("/contacts/:id", async (req, res) => {
   }
 });
 
+// BLOCK CONTACT
+router.put("/:id/block", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user.blockedContacts.includes(req.body.friendId)) {
+      await user.updateOne({ $push: { blockedContacts: req.body.friendId } });
+      res.status(200).json({ message: "User has been blocked" });
+    } else {
+      res.status(403).json({ message: "User is already blocked" });
+    }
+  } catch (err) {
+    res.status(500).json(err);
+  }
+});
+
+// UNBLOCK CONTACT
+router.put("/:id/unblock", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (user.blockedContacts.includes(req.body.friendId)) {
+      await user.updateOne({ $pull: { blockedContacts: req.body.friendId } });
+      res.status(200).json({ message: "User has been unblocked" });
+    } else {
+      res.status(404).json({ message: "User is not blocked" });
+    }
+  } catch (err) {
+    res.status(500).json(err);
+  }
+});
+
+// GET BLOCKED CONTACT LIST
+router.get("/blockedContacts/:id", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    const blockedContacts = await Promise.all(
+      user.blockedContacts.map((contactId) => {
+        return User.findById(contactId);
+      })
+    );
+    let blockedContactList = [];
+    blockedContacts.map((contact) => {
+      const { _id, name, about, avatar } = contact;
+      blockedContactList.push({ _id, name, about, avatar });
+    });
+    res.status(200).json(blockedContactList);
+  } catch (err) {
+    res.status(500).json("Something went wrong");
+  }
+});
+
 // SEARCH USER
-router.get('/search/:key', async (req, res) => {
-  try{
-    const user = await User.find(
-      {
-        "$or": [
-          {username:{$regex:req.params.key}}
-        ]
-      }
-    )
-    res.send(user)
-  } catch(err){
-    return res.status(500).json("No user found")
+router.get("/search/:key", async (req, res) => {
+  try {
+    const user = await User.find({
+      $or: [
+        { username: { $regex: req.params.key, $options: "i" } },
+      ]
+    });
+    if (!user) return res.status(404).json({ message: "No user found" });
+    res.send(user);
+  } catch (err) {
+    return res.status(500).json({ message: "Error occurred while searching for user", error: err });
   }
 });
 
@@ -104,14 +163,63 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+// UPDATE THEME
+router.put("/:id/theme", async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { theme: req.body.theme },
+      { new: true }
+    );
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+    } else {
+      res
+        .status(200)
+        .json({ message: "Theme changed successfully", theme: user.theme });
+    }
+  } catch (err) {
+    res.status(500).json(err);
+  }
+});
+
+// UPDATE CHAT WALLPAPER
+router.put("/:id/update-chat-wallpaper", (req, res) => {
+  const { color } = req.body;
+  const { id } = req.params;
+
+  User.findByIdAndUpdate(
+    id,
+    { chatWallpaper: color },
+    { new: true },
+    (err, user) => {
+      if (err) return res.status(500).send(err);
+      return res.status(200).send(user);
+    }
+  );
+});
+
+// UPDATE CHAT BACKGROUND DRAWINGS
+router.put("/:id/update-chat-drawing", (req, res) => {
+  User.findByIdAndUpdate(
+    req.params.id,
+    { drawings: req.body.drawings },
+    { new: true },
+    (err, user) => {
+      if (err) return res.status(500).send(err);
+      return res.send(user);
+    }
+  );
+});
+
 // ADD A CONTACT
 router.put("/:id/add", async (req, res) => {
   if (req.body.userId !== req.params.id) {
     try {
       const user = await User.findById(req.params.id);
-      const currentUser = await User.findById(req.body.userId);
-      if (!user.contacts.includes(req.body.userId)) {
-        await user.updateOne({ $push: { contacts: req.body.userId } });
+      const currentUser = await User.findById(req.body.friendId);
+      if (!user.contacts.includes(req.body.friendId)) {
+        await user.updateOne({ $push: { contacts: req.body.friendId } });
         await currentUser.updateOne({ $push: { contacts: req.params.id } });
         res.status(200).json("User has been added");
       } else {
@@ -130,9 +238,9 @@ router.put("/:id/remove", async (req, res) => {
   if (req.body.userId !== req.params.id) {
     try {
       const user = await User.findById(req.params.id);
-      const currentUser = await User.findById(req.body.userId);
-      if (user.contacts.includes(req.body.userId)) {
-        await user.updateOne({ $pull: { contacts: req.body.userId } });
+      const currentUser = await User.findById(req.body.friendId);
+      if (user.contacts.includes(req.body.friendId)) {
+        await user.updateOne({ $pull: { contacts: req.body.friendId } });
         await currentUser.updateOne({ $pull: { contacts: req.params.id } });
         res.status(200).json("User has been removed");
       } else {
