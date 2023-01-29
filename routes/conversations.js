@@ -35,7 +35,7 @@ router.get("/:userId", async (req, res) => {
               },
             },
             { $sort: { _id: -1 } },
-            { $project: { text: 1, createdAt: 1, _id: 0 } },
+            { $project: { imageUrl: 1, text: 1, createdAt: 1, _id: 0 } },
             { $limit: 1 },
           ],
           as: "lastMessages",

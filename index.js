@@ -6,6 +6,8 @@ const conversationRoute = require("./routes/conversations");
 const messageRoute = require("./routes/messages");
 const userRoute = require("./routes/users");
 const fileUpload = require("express-fileupload");
+const cloudinary = require("cloudinary").v2;
+const bodyParser = require("body-parser");
 const dotenv = require("dotenv");
 const helmet = require("helmet");
 const morgan = require("morgan");
@@ -15,6 +17,12 @@ const app = express();
 const socket = require("socket.io");
 
 dotenv.config();
+
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.CLOUD_API_KEY,
+  api_secret: process.env.CLOUD_API_SECRET,
+});
 
 // DB connection
 mongoose
@@ -28,10 +36,14 @@ app.use("/images", express.static(path.join(__dirname, "public/images")));
 
 // middlewares
 app.use(express.json());
-app.use(fileUpload());
+app.use(fileUpload({ useTempFiles: true }));
 app.use(helmet());
 app.use(morgan("common"));
 app.use(cors());
+
+// parse incoming form data
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 
 // auth
 app.use("/api/register", register);
@@ -62,11 +74,9 @@ app.use("/api/conversations", conversationRoute);
 app.use("/api/messages", messageRoute);
 
 const port = process.env.PORT || 5000;
-
-// app.listen(port, console.log(`Server is running`));
-
 const server = app.listen(port, console.log("Server is running"));
 
+/*****************************************************************************/
 // socket
 const io = socket(server, {
   pingTimeout: 60000,
@@ -121,7 +131,42 @@ io.on("connection", (socket) => {
   });
 
   //send and get message
-  socket.on("sendMessage", ({ conversationId, senderId, receiverId, text }) => {
+  socket.on(
+    "sendMessage",
+    ({ conversationId, senderId, receiverId, text, image }) => {
+      if (image) {
+        cloudinary.uploader.upload(image, function (result) {
+          const imageUrl = result.secure_url;
+          //update the message object with the imageUrl
+          const message = {
+            conversationId,
+            senderId,
+            receiverId,
+            text,
+            imageUrl,
+          };
+          //save message to the database
+          //emit the message to the receiver
+          const user = getUser(receiverId);
+          io.to(user?.socketId).emit("getMessage", message);
+        });
+      } else {
+        //save text message to the database
+        //emit the message to the receiver
+        const message = {
+          conversationId,
+          senderId,
+          receiverId,
+          text,
+        };
+        const user = getUser(receiverId);
+        io.to(user?.socketId).emit("getMessage", message);
+        io.to(user?.socketId).emit("newNotification", message);
+      }
+    }
+  );
+
+  /* socket.on("sendMessage", ({ conversationId, senderId, receiverId, text }) => {
     const user = getUser(receiverId);
     io.to(user?.socketId).emit("getMessage", {
       conversationId,
@@ -133,7 +178,7 @@ io.on("connection", (socket) => {
       senderId,
       text,
     });
-  });
+  }); */
 
   /* socket.on(
     "send-notification",
