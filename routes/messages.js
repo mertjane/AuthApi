@@ -34,34 +34,6 @@ router.post("/", async (req, res) => {
   }
 });
 
-/* router.post("/", async (req, res) => {
-  const newMessage = new Message(req.body);
-  try {
-    const savedMessage = await newMessage.save();
-    res.status(200).json(savedMessage);
-  } catch (err) {
-    res.status(500).json(err);
-  }
-}); */
-
-// uploadImage cloudinary
-/* router.post("/sendImage", async (req, res) => {
-  try {
-    const result = await cloudinary.uploader.upload(
-      req.files.image.tempFilePath,
-      {
-        use_filename: true,
-        folder: "ichat-app",
-      }
-    )
-    res.status(200).json(result)
-  } catch (error) {
-    res.status(500).send(error)
-  }
-  
-});
- */
-
 
 // get a currentChat messages
 router.get("/:conversationId", async (req, res) => {
