@@ -87,9 +87,9 @@ const io = socket(server, {
 
 let users = [];
 
-const addUser = (userId, socketId, roomId) => {
+const addUser = (userId, socketId) => {
   !users.some((user) => user.userId === userId) &&
-    users.push({ userId, socketId, roomId });
+    users.push({ userId, socketId });
 };
 
 const removeUser = (socketId) => {
@@ -104,14 +104,21 @@ io.on("connection", (socket) => {
   //connection
   console.log("a user connected to socket");
 
+  // online status
+  socket.on("user-online", (userId) => {
+    addUser(userId, socket.id);
+    console.log(`User ${userId} is now online.`);
+  });
+  socket.on("check-user-online", (userId) => {
+    const targetUser = getUser(userId);
+    const isOnline = !!targetUser;
+    socket.emit("user-online-status", { userId, isOnline });
+  });
+
+  // join chat
   socket.on("join-chat", (roomId) => {
     socket.join(roomId);
     console.log("User joined room " + roomId);
-  });
-
-  // user online status
-  socket.on("user-online", () => {
-    socket.broadcast.emit("user-online-from-server");
   });
 
   //take userId and socketId from user
@@ -133,65 +140,17 @@ io.on("connection", (socket) => {
   //send and get message
   socket.on(
     "sendMessage",
-    ({ conversationId, senderId, receiverId, text, image }) => {
-      if (image) {
-        cloudinary.uploader.upload(image, function (result) {
-          const imageUrl = result.secure_url;
-          //update the message object with the imageUrl
-          const message = {
-            conversationId,
-            senderId,
-            receiverId,
-            text,
-            imageUrl,
-          };
-          //save message to the database
-          //emit the message to the receiver
-          const user = getUser(receiverId);
-          io.to(user?.socketId).emit("getMessage", message);
-        });
-      } else {
-        //save text message to the database
-        //emit the message to the receiver
-        const message = {
-          conversationId,
-          senderId,
-          receiverId,
-          text,
-        };
-        const user = getUser(receiverId);
-        io.to(user?.socketId).emit("getMessage", message);
-        io.to(user?.socketId).emit("newNotification", message);
-      }
+    ({ conversationId, senderId, receiverId, text, image}) => {
+      const user = getUser(receiverId);
+      io.to(user?.socketId).emit("getMessage", {
+        conversationId,
+        senderId,
+        text,
+        image
+      });
     }
   );
-
-  /* socket.on("sendMessage", ({ conversationId, senderId, receiverId, text }) => {
-    const user = getUser(receiverId);
-    io.to(user?.socketId).emit("getMessage", {
-      conversationId,
-      senderId,
-      text,
-    });
-    io.to(user?.socketId).emit("newNotification", {
-      conversationId,
-      senderId,
-      text,
-    });
-  }); */
-
-  /* socket.on(
-    "send-notification",
-    ({ conversationId, senderId, receiverId, text }) => {
-      const user = getUser(receiverId);
-        io.to(user?.socketId).emit("get-notification", {
-          conversationId,
-          senderId,
-          text,
-        });
-      }
-  ); */
-
+  
   //disconnection
   socket.on("disconnect", () => {
     console.log("user disconnected");

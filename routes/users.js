@@ -62,8 +62,8 @@ router.get("/contacts/:id", async (req, res) => {
     );
     let contactList = [];
     contacts.map((contact) => {
-      const { _id, name, about, avatar } = contact;
-      contactList.push({ _id, name, about, avatar });
+      const { _id, name, about, avatar, privacy} = contact;
+      contactList.push({ _id, name, about, avatar, privacy});
     });
     res.status(200).json(contactList);
   } catch (err) {
@@ -74,13 +74,18 @@ router.get("/contacts/:id", async (req, res) => {
 // BLOCK CONTACT
 router.put("/:id/block", async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
-    if (!user.blockedContacts.includes(req.body.friendId)) {
-      await user.updateOne({ $push: { blockedContacts: req.body.friendId } });
-      res.status(200).json({ message: "User has been blocked" });
-    } else {
-      res.status(403).json({ message: "User is already blocked" });
+    const userA = await User.findById(req.params.id);
+    const userB = await User.findById(req.body.friendId);
+
+    if (!userA.blockedContacts.includes(req.body.friendId)) {
+      await userA.updateOne({ $push: { blockedContacts: req.body.friendId } });
     }
+
+    if (!userB.blockedContacts.includes(req.params.id)) {
+      await userB.updateOne({ $push: { blockedContacts: req.params.id } });
+    }
+
+    res.status(200).json({ message: "User has been blocked" });
   } catch (err) {
     res.status(500).json(err);
   }
@@ -89,13 +94,18 @@ router.put("/:id/block", async (req, res) => {
 // UNBLOCK CONTACT
 router.put("/:id/unblock", async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
-    if (user.blockedContacts.includes(req.body.friendId)) {
-      await user.updateOne({ $pull: { blockedContacts: req.body.friendId } });
-      res.status(200).json({ message: "User has been unblocked" });
-    } else {
-      res.status(404).json({ message: "User is not blocked" });
+    const userA = await User.findById(req.params.id);
+    const userB = await User.findById(req.body.friendId);
+
+    if (userA.blockedContacts.includes(req.body.friendId)) {
+      await userA.updateOne({ $pull: { blockedContacts: req.body.friendId } });
     }
+
+    if (userB.blockedContacts.includes(req.params.id)) {
+      await userB.updateOne({ $pull: { blockedContacts: req.params.id } });
+    }
+
+    res.status(200).json({ message: "User has been unblocked" });
   } catch (err) {
     res.status(500).json(err);
   }
@@ -122,7 +132,7 @@ router.get("/blockedContacts/:id", async (req, res) => {
 });
 
 // SEARCH USER
-router.get("/search/:key", async (req, res) => {
+router.get("/search/:key", async (req, res) => { 
   try {
     const user = await User.find({
       $or: [
@@ -210,6 +220,49 @@ router.put("/:id/update-chat-drawing", (req, res) => {
       return res.send(user);
     }
   );
+});
+
+// UPDATE USER SOUNDS 
+router.put("/:id/update-sounds", (req, res) => {
+  User.findByIdAndUpdate(
+    req.params.id,
+    { sounds: req.body.sounds },
+    { new: true },
+    (err, user) => {
+      if (err) return res.status(500).send(err);
+      return res.send(user);
+    }
+  );
+});
+
+
+//UPDATE PRIVACY SETTINGS
+router.put("/:id/update-privacy", async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      {
+        $set: {
+          "privacy.lastSeen": req.body.lastSeen,
+          "privacy.onlineStatus": req.body.onlineStatus,
+          "privacy.profilePhoto": req.body.profilePhoto,
+          "privacy.aboutMe": req.body.aboutMe,
+          "privacy.readReceipt": req.body.readReceipt,
+        }
+      },
+      { new: true }
+    );
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+    } else {
+      res.status(200).json({
+        message: "User privacy successfully updated",
+        privacy: user.privacy
+      });
+    }
+  } catch (err) {
+    res.status(500).json(err);
+  }
 });
 
 // ADD A CONTACT
