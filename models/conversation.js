@@ -3,10 +3,8 @@ const mongoose = require("mongoose");
 const ConversationSchema = new mongoose.Schema(
   {
     members: {
-        type: Array,
+      type: Array,
     },
-    /* lastMessage: {type: String, default: ""},
-    time: {type: String, default: ""} */
   },
   { timestamps: true }
 );

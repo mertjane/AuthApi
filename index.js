@@ -4,6 +4,7 @@ const register = require("./routes/register");
 const login = require("./routes/login");
 const conversationRoute = require("./routes/conversations");
 const messageRoute = require("./routes/messages");
+const Message = require("./models/message");
 const userRoute = require("./routes/users");
 const fileUpload = require("express-fileupload");
 const cloudinary = require("cloudinary").v2;
@@ -112,6 +113,7 @@ io.on("connection", (socket) => {
   socket.on("check-user-online", (userId) => {
     const targetUser = getUser(userId);
     const isOnline = !!targetUser;
+    // const lastSeen = !!targetUser;
     socket.emit("user-online-status", { userId, isOnline });
   });
 
@@ -140,17 +142,26 @@ io.on("connection", (socket) => {
   //send and get message
   socket.on(
     "sendMessage",
-    ({ conversationId, senderId, receiverId, text, image}) => {
+    ({ conversationId, senderId, receiverId, text, image }) => {
       const user = getUser(receiverId);
       io.to(user?.socketId).emit("getMessage", {
         conversationId,
         senderId,
         text,
-        image
+        image,
       });
     }
   );
-  
+
+  socket.on("send-notification", ({sender, receiver, conversationId, unreadMessages }) => {
+    const receiverId = getUser(receiver)
+    io.to(receiverId?.socketId).emit("get-notification", {
+      sender,
+      conversationId,
+      unreadMessages,
+    })
+  })
+
   //disconnection
   socket.on("disconnect", () => {
     console.log("user disconnected");

@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const Message = require("../models/message");
+const Conversation = require("../models/conversation");
 const cloudinary = require("cloudinary").v2;
 
 router.post("/", async (req, res) => {
@@ -25,7 +26,7 @@ router.post("/", async (req, res) => {
           conversationId: req.body.conversationId,
           sender: req.body.sender,
           imageUrl: imageUrl,
-          isSent: false,
+          isSent: true,
         });
       } else {
         // if a single image file is present, upload it to Cloudinary
@@ -41,7 +42,7 @@ router.post("/", async (req, res) => {
           conversationId: req.body.conversationId,
           sender: req.body.sender,
           imageUrl: result.secure_url,
-          isSent: false,
+          isSent: true,
         });
       }
     } else {
@@ -50,24 +51,11 @@ router.post("/", async (req, res) => {
         conversationId: req.body.conversationId,
         sender: req.body.sender,
         text: req.body.text,
-        isSent: false,
+        isSent: true,
       });
     }
     // save the message to the database
     const savedMessage = await newMessage.save();
-    // isSent indicator
-    /* setTimeout(() => {
-      Message.updateOne(
-        { _id: savedMessage._id },
-        { $set: { isSent: true } }
-      )
-        .then(() => {
-          console.log("isSent status updated to true");
-        })
-        .catch((err) => {
-          console.error(err.message);
-        });
-    }, 1000); */
     res.status(200).json(savedMessage);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -88,6 +76,60 @@ router.get("/:conversationId", async (req, res) => {
       .skip(offset)
       .limit(limit);
     res.status(200).json(messages);
+  } catch (err) {
+    res.status(500).json(err);
+  }
+});
+
+// update sending message receivedCheck
+router.put("/:conversationId", async (req, res) => {
+  try {
+    const result = await Message.updateMany(
+      {
+        conversationId: req.params.conversationId,
+        isReceived: false,
+      },
+      {
+        $set: { isReceived: true },
+      }
+    );
+    res.status(200).json(result);
+  } catch (err) {
+    res.status(500).json(err);
+  }
+});
+
+router.put("/:conversationId/update-isRead", async (req, res) => {
+  try {
+    const result = await Message.updateMany(
+      {
+        conversationId: req.params.conversationId,
+        isRead: false,
+        sender: req.body.sender
+      },
+      {
+        $set: { isRead: true },
+      }
+    );
+    res.status(200).json(result);
+  } catch (err) {
+    res.status(500).json(err);
+  }
+});
+
+// update blueTick when user online
+router.put("/:conversationId", async (req, res) => {
+  try {
+    const result = await Message.updateMany(
+      {
+        conversationId: req.params.conversationId,
+        isRead: false,
+      },
+      {
+        $set: { isRead: true },
+      }
+    );
+    res.status(200).json(result);
   } catch (err) {
     res.status(500).json(err);
   }

@@ -19,6 +19,10 @@ const MessageSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    isReceived: {
+      type: Boolean,
+      default: false,
+    },
     isRead: {
       type: Boolean,
       default: false,
