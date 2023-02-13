@@ -153,6 +153,7 @@ io.on("connection", (socket) => {
     }
   );
 
+  // send newMessage notifications
   socket.on("send-notification", ({sender, receiver, conversationId, unreadMessages }) => {
     const receiverId = getUser(receiver)
     io.to(receiverId?.socketId).emit("get-notification", {

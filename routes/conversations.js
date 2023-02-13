@@ -71,4 +71,17 @@ router.delete("/:conversationId", async (req, res) => {
   }
 });
 
+// remove notifications in conversation
+router.delete("/:conversationId/:userId", async (req, res) => {
+  try {
+    const deletedNotifications = await Conversation.updateOne(
+      { _id: req.params.conversationId },
+      { $pull: { notifications: { sender: { $ne: req.params.userId } } } }
+    );
+    res.status(200).json(deletedNotifications);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

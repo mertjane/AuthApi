@@ -7,6 +7,7 @@ router.post("/", async (req, res) => {
   try {
     let newMessage;
     let imageUrl = [];
+
     if (req.files && req.files.image) {
       // check if image files are present
       if (Array.isArray(req.files.image)) {
@@ -56,6 +57,11 @@ router.post("/", async (req, res) => {
     }
     // save the message to the database
     const savedMessage = await newMessage.save();
+    // update the conversation's notifications array with the new message
+    await Conversation.updateOne(
+      { _id: req.body.conversationId },
+      { $push: { notifications: savedMessage } }
+    );
     res.status(200).json(savedMessage);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -64,9 +70,8 @@ router.post("/", async (req, res) => {
 
 // get a currentChat messages
 router.get("/:conversationId", async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 30;
-  const offset = (page - 1) * limit;
+  const offset = parseInt(req.query.offset) || 0;
 
   try {
     const messages = await Message.find({
@@ -105,7 +110,7 @@ router.put("/:conversationId/update-isRead", async (req, res) => {
       {
         conversationId: req.params.conversationId,
         isRead: false,
-        sender: req.body.sender
+        sender: req.body.sender,
       },
       {
         $set: { isRead: true },
